@@ -1,0 +1,11 @@
+flask
+python-dotenv
+scikit-learn
+pandas
+numpy
+joblib
+requests
+datasets
+gensim
+sentence-transformers
+torch

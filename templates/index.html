@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MoodTunes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0e0e10;
+    --surface:  #18181b;
+    --surface2: #222226;
+    --border:   rgba(255,255,255,0.08);
+    --text:     #e8e8e8;
+    --muted:    #888;
+    --accent:   #1DB954;
+    --radius:   14px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--accent); }
+  .auth-btn {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .auth-btn:hover { background: var(--surface2); }
+  .auth-btn.connected {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Main layout ── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 32px 24px;
+    gap: 24px;
+  }
+
+  /* ── Left panel — chat ── */
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    height: calc(100vh - 140px);
+  }
+  .chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface2) transparent;
+  }
+  .bubble {
+    max-width: 85%;
+    padding: 11px 15px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .bubble.bot {
+    background: var(--surface2);
+    border-radius: 16px 16px 16px 4px;
+    align-self: flex-start;
+    color: var(--text);
+  }
+  .bubble.user {
+    background: var(--accent);
+    color: #000;
+    border-radius: 16px 16px 4px 16px;
+    align-self: flex-end;
+    font-weight: 500;
+  }
+  .mood-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .mood-tag {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .chat-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .chat-input-area textarea {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    resize: none;
+    height: 44px;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input-area textarea:focus { border-color: rgba(255,255,255,0.2); }
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .send-btn:hover { opacity: 0.88; }
+  .send-btn:active { transform: scale(0.95); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Right panel — player ── */
+  .player-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: calc(100vh - 140px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface2) transparent;
+  }
+
+  /* mood card */
+  .mood-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.4s;
+  }
+  .mood-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    transition: background 0.4s;
+  }
+  .mood-label { font-family: 'DM Serif Display', serif; font-size: 22px; }
+  .mood-confidence { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* track list */
+  .tracks-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    flex: 1;
+  }
+  .tracks-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .track-list { padding: 8px 0; }
+  .track-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 0;
+  }
+  .track-item:hover { background: var(--surface2); }
+  .track-item.active { background: rgba(29,185,84,0.08); }
+  .track-art {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+  .track-info { flex: 1; min-width: 0; }
+  .track-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .track-artist { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .track-play-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .track-item:hover .track-play-icon { opacity: 1; }
+  .track-item.active .track-play-icon { opacity: 1; }
+
+  /* now playing bar */
+  .now-playing {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: none;
+    align-items: center;
+    gap: 14px;
+  }
+  .now-playing.visible { display: flex; }
+  .np-art {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .np-info { flex: 1; min-width: 0; }
+  .np-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .np-artist { font-size: 12px; color: var(--muted); }
+  audio { display: none; }
+
+  /* empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    text-align: center;
+    gap: 10px;
+  }
+  .empty-state .icon { font-size: 36px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+
+  /* loading dots */
+  .typing { display: flex; gap: 5px; align-items: center; padding: 4px 2px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: blink 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+  /* spotify login nudge */
+  .login-nudge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin: 8px 20px 0;
+  }
+  .login-nudge a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+    .chat-panel, .player-panel { height: auto; }
+    .chat-messages { min-height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Mood<span>Tunes</span></div>
+  {% if logged_in %}
+    <a href="/logout" class="auth-btn connected">● Spotify connected</a>
+  {% else %}
+    <a href="/login" class="auth-btn">Connect Spotify</a>
+  {% endif %}
+</header>
+
+<main>
+  <!-- Left: Chat -->
+  <div class="chat-panel">
+    <div class="chat-header">Tell me how you're feeling today</div>
+    <div class="chat-messages" id="messages">
+      <div class="bubble bot">
+        Hey! 👋 How are you feeling right now? Just tell me in your own words — I'll figure out the vibe and find music that fits.
+      </div>
+      {% if not logged_in %}
+      <div class="bubble bot" style="font-size:13px; color: var(--muted);">
+        Tip: <a href="/login" style="color: #1DB954;">Connect Spotify</a> to stream full tracks directly here.
+      </div>
+      {% endif %}
+    </div>
+    <div class="chat-input-area">
+      <textarea id="userInput" placeholder="e.g. I'm feeling anxious and restless..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8h12M9 3l5 5-5 5" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right: Player -->
+  <div class="player-panel" id="playerPanel">
+    <div class="mood-card" id="moodCard">
+      <div class="mood-icon" id="moodIcon" style="background: rgba(136,135,128,0.15);">🎵</div>
+      <div>
+        <div class="mood-label" id="moodLabel">Waiting for your vibe...</div>
+        <div class="mood-confidence" id="moodConfidence">Tell me how you feel</div>
+      </div>
+    </div>
+
+    <div class="now-playing" id="nowPlaying">
+      <img class="np-art" id="npArt" src="" alt=""/>
+      <div class="np-info">
+        <div class="np-name" id="npName">—</div>
+        <div class="np-artist" id="npArtist">—</div>
+      </div>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <div class="tracks-container">
+      <div class="tracks-header">Recommended tracks</div>
+      <div id="trackList">
+        <div class="empty-state">
+          <div class="icon">🎧</div>
+          <p>Your playlist will appear here once you share how you're feeling.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const messagesEl  = document.getElementById("messages");
+  const inputEl     = document.getElementById("userInput");
+  const sendBtn     = document.getElementById("sendBtn");
+  const moodCard    = document.getElementById("moodCard");
+  const moodIcon    = document.getElementById("moodIcon");
+  const moodLabel   = document.getElementById("moodLabel");
+  const moodConf    = document.getElementById("moodConfidence");
+  const trackList   = document.getElementById("trackList");
+  const nowPlaying  = document.getElementById("nowPlaying");
+  const audioPlayer = document.getElementById("audioPlayer");
+  const npArt       = document.getElementById("npArt");
+  const npName      = document.getElementById("npName");
+  const npArtist    = document.getElementById("npArtist");
+
+  let currentTracks = [];
+
+  function addBubble(text, type) {
+    const div = document.createElement("div");
+    div.className = `bubble ${type}`;
+    div.innerHTML = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const div = document.createElement("div");
+    div.className = "bubble bot";
+    div.id = "typing";
+    div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function renderTracks(tracks, color) {
+    if (!tracks || tracks.length === 0) {
+      trackList.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🔌</div>
+          <p>Connect Spotify above to get track recommendations!</p>
+        </div>`;
+      return;
+    }
+    currentTracks = tracks;
+    trackList.innerHTML = tracks.map((t, i) => `
+      <div class="track-item" onclick="playTrack(${i})" id="track-${i}">
+        <img class="track-art" src="${t.image}" alt="" onerror="this.style.background='#222'"/>
+        <div class="track-info">
+          <div class="track-name">${t.name}</div>
+          <div class="track-artist">${t.artist}</div>
+        </div>
+        <div class="track-play-icon">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
+            <path d="M1 1l8 5-8 5V1z" fill="#000"/>
+          </svg>
+        </div>
+      </div>`).join("");
+  }
+
+  function playTrack(index) {
+    const track = currentTracks[index];
+    if (!track) return;
+
+    document.querySelectorAll(".track-item").forEach(el => el.classList.remove("active"));
+    document.getElementById(`track-${index}`)?.classList.add("active");
+
+    npArt.src      = track.image;
+    npName.textContent   = track.name;
+    npArtist.textContent = track.artist;
+    nowPlaying.classList.add("visible");
+
+    if (track.preview) {
+      audioPlayer.src = track.preview;
+      audioPlayer.play();
+    } 
+    else {
+      window.open(track.url, "_blank");
+    }
+  }
+
+  function updateMoodUI(data) {
+    const hex = data.color || "#888780";
+    const r   = parseInt(hex.slice(1,3),16);
+    const g   = parseInt(hex.slice(3,5),16);
+    const b   = parseInt(hex.slice(5,7),16);
+
+    moodCard.style.borderColor = hex;
+    moodIcon.style.background  = `rgba(${r},${g},${b},0.15)`;
+    moodIcon.textContent       = data.emoji || "🎵";
+    moodLabel.textContent      = data.label || data.mood;
+    moodConf.textContent       = data.confidence
+      ? `Detected with ${data.confidence}% confidence`
+      : `Mood: ${data.mood}`;
+  }
+
+  async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = "";
+    sendBtn.disabled = true;
+    addBubble(text, "user");
+    const typing = addTyping();
+
+    try {
+      const resp = await fetch("/classify", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ text }),
+      });
+
+      typing.remove();
+
+      if (resp.status === 401) {
+        addBubble('Your Spotify session expired. <a href="/login" style="color:#1DB954;">Reconnect here</a>.', "bot");
+        return;
+      }
+
+      const data = await resp.json();
+      if (data.error) {
+        addBubble(`⚠️ ${data.error}`, "bot");
+        return;
+      }
+
+      updateMoodUI(data);
+
+      const color = data.color || "#1DB954";
+
+      const moodMsg = `Detected mood: <span class="mood-tag" style="background:rgba(${hexToRgb(color)},0.15);color:${color};border-color:${color}">
+        ${(data.tracks && data.tracks.length > 0)
+          ? `<br><br>Found <b>${data.tracks.length} tracks</b> that match your energy. Click any to preview →`
+          : `<br><br>Connect Spotify above to get music recommendations!`}`;
+
+      addBubble(moodMsg, "bot");
+      renderTracks(data.tracks || [], color);
+
+      if (data.tracks.length > 0) {
+        setTimeout(() => playTrack(0), 600);
+      }
+    } catch (err) {
+      typing.remove();
+      addBubble("Something went wrong. Is Flask running?", "bot");
+    } finally {
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `${r},${g},${b}`;
+  }
+</script>
+</body>
+</html>
